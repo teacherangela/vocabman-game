@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Teacher Angela's Vocabman!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+    <style>
+        :root { 
+            --bg-main: #eef2f3; 
+            --accent: #4DB6AC;  
+            --accent-dark: #00897B;
+            --header-bg: #ffffff; 
+            --panel-bg: rgba(255, 255, 255, 0.9);  
+            --text-dark: #263238;
+            --neon-green: #66bb6a; 
+            --neon-red: #ef5350; 
+            --shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        
+        body { 
+            margin: 0; padding: 0; 
+            font-family: 'Fredoka', sans-serif; 
+            background: var(--bg-main); color: var(--text-dark); 
+            overflow: hidden; touch-action: none; 
+        }
+
+        .screen { display: none; position: absolute; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        
+        #intro-screen { 
+            display: flex; 
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('background 1.gif') center/cover; 
+        }
+
+        /* Winner Screen Style */
+        #winner-screen {
+            background: rgba(0,0,0,0.9);
+            z-index: 5000;
+            color: white;
+            text-align: center;
+        }
+
+        .winner-card {
+            background: white;
+            color: var(--text-dark);
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 0 30px var(--neon-green);
+            max-width: 80%;
+        }
+
+        .top-right-fs {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .left-ui-group {
+            position: absolute; left: 20px; top: 10px;
+            display: flex; gap: 10px; align-items: center;
+            z-index: 2100;
+        }
+
+        #game-header {
+            position: absolute; top: 0; left: 0; width: 100%; height: 220px;
+            display: flex; background: var(--header-bg); 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 1000;
+            padding-top: 65px; 
+            box-sizing: border-box;
+        }
+
+        .q-box { 
+            flex: 1; height: 150px; margin: 5px 15px; 
+            background: #f8f9fa; border: 3px solid #e0e0e0;
+            display: flex; align-items: center; padding: 0 20px;
+            color: var(--text-dark); border-radius: 25px; box-sizing: border-box; position: relative;
+            justify-content: center;
+        }
+        
+        .q-img-container { width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; border-radius: 15px; background: #eee;}
+        .q-img-game { max-height: 100%; max-width: 100%; object-fit: contain; }
+        
+        .q-content { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .q-text { font-size: 28px; font-weight: 600; line-height: 1.2; padding: 0 25px; text-align: center; }
+
+        .next-btn-overlay {
+            position: absolute; inset: 0; background: rgba(255,255,255,0.7);
+            display: none; align-items: center; justify-content: center; z-index: 950;
+            backdrop-filter: blur(2px);
+        }
+
+        #game-boundary { position: absolute; top: 220px; left: 0; width: 100%; height: calc(100% - 220px); display: flex; }
+        .game-lane { position: relative; height: 100%; flex: 1; background-size: cover; background-position: center; border-right: 4px solid rgba(255,255,255,0.3); }
+
+        .lane-info { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 800; }
+        .team-tag { font-size: 16px; color: #fff; background: var(--accent); padding: 4px 15px; border-radius: 20px; box-shadow: var(--shadow); }
+        .lane-hp { display: flex; gap: 3px; background: rgba(255,255,255,0.2); padding: 5px; border-radius: 15px; }
+        .hp-heart { width: 28px; height: 28px; object-fit: contain; }
+        
+        .lane-timer { font-size: 22px; font-weight: bold; color: #fff; background: var(--neon-red); padding: 4px 15px; border-radius: 12px; box-shadow: var(--shadow); }
+
+        #top-ui {
+            position: absolute; top: 10px; left: 0; width: 100%;
+            display: flex; justify-content: center; align-items: center; z-index: 2000;
+            padding: 0 20px; box-sizing: border-box;
+        }
+        
+        .scoreboard {
+            background: var(--panel-bg); backdrop-filter: blur(8px); border-radius: 60px;
+            display: flex; padding: 8px 25px; gap: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        .score-box {
+            background: var(--text-dark); color: #fff;
+            font-size: 32px; padding: 5px 25px; border-radius: 30px;
+            min-width: 60px; text-align: center; font-weight: bold;
+        }
+        
+        .right-ui-group {
+            position: absolute; right: 20px; top: 0;
+            display: flex; gap: 10px; align-items: center;
+        }
+
+        .ui-btn {
+            background: rgba(255,255,255,0.9); color: var(--text-dark); border: none;
+            padding: 10px 15px; border-radius: 25px; cursor: pointer; font-size: 14px;
+            box-shadow: var(--shadow); transition: 0.2s; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .ui-btn-circle { width: 45px; height: 45px; border-radius: 50%; font-size: 20px; }
+        .ui-btn:hover { background: #fff; transform: scale(1.05); }
+
+        .team-end-overlay { display: none; position: absolute; inset: 0; background: rgba(38, 50, 56, 0.95); z-index: 900; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; }
+        
+        .pacman { position: absolute; width: 70px; height: 70px; background: url('PACMAN.gif') center/contain no-repeat; z-index: 500; cursor: grab; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); }
+        
+        .ghost-target { position: absolute; width: 120px; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .ghost-img { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2)); }
+        .ans-tag { background: white; color: var(--text-dark); padding: 6px 12px; border-radius: 12px; margin-top: 5px; box-shadow: var(--shadow); font-size: 14px; text-align: center; max-width: 100px; font-weight: bold;}
+        .ans-img-content { width: 50px; height: 50px; object-fit: cover; border-radius: 10px; border: 3px solid white; box-shadow: var(--shadow); }
+
+        #settings-modal { display: none; position: fixed; z-index: 3000; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); overflow-y: auto; padding: 20px; }
+        .modal-content { background: #fff; margin: auto; padding: 30px; border-radius: 30px; max-width: 900px; color: var(--text-dark); box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .file-controls { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+        .q-card { background: #f1f3f4; padding: 20px; margin-bottom: 20px; border-radius: 20px; transition: 0.2s; position: relative; }
+        .btn { padding: 12px 25px; border: none; border-radius: 15px; cursor: pointer; transition: transform 0.1s; font-size: 16px; }
+
+        .delete-btn {
+            position: absolute; top: 10px; right: 10px;
+            background: #ff5252; color: white; border: none;
+            width: 30px; height: 30px; border-radius: 50%;
+            cursor: pointer; font-weight: bold; line-height: 30px; padding: 0;
+        }
+        
+        @keyframes vibrate {
+            0% { transform: translate(0,0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(3px, -3px); }
+            60% { transform: translate(-3px, -3px); }
+            80% { transform: translate(3px, 3px); }
+            100% { transform: translate(0,0); }
+        }
+        .vibrate { animation: vibrate 0.15s linear infinite; }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop src="https://cdn.pixabay.com/audio/2023/06/12/audio_6398f63857.mp3"></audio>
+    
+    <audio id="sfx-chime" src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3"></audio>
+    <audio id="sfx-lose-life" src="https://assets.mixkit.co/active_storage/sfx/2017/2017-preview.mp3"></audio>
+    <audio id="sfx-gameover" src="https://assets.mixkit.co/active_storage/sfx/2016/2016-preview.mp3"></audio>
+
+    <div id="intro-screen" class="screen">
+        <div class="top-right-fs">
+            <button class="ui-btn ui-btn-circle" onclick="toggleFullscreen()" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; backdrop-filter: blur(5px);">⛶</button>
+        </div>
+
+        <h1 class="title" style="font-size: 56px; color: white; text-align:center; margin-bottom: 40px; text-shadow: 0 5px 15px rgba(0,0,0,0.5);">Teacher Angela's<br>Vocabman!</h1>
+        <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+            <div style="display: flex; gap: 20px;">
+                <button class="btn" style="background:var(--neon-green); color:white; font-size:28px; padding: 20px 60px; border-radius: 50px; font-weight: bold; box-shadow: 0 10px 20px rgba(0,0,0,0.3);" onclick="saveAndStart()">PLAY ▶</button>
+                <button class="btn" style="background:rgba(255,255,255,0.2); color:white; font-size:24px; padding: 15px 40px; border-radius: 50px; backdrop-filter: blur(5px); border: 2px solid white;" onclick="openSettings()">SETTINGS ⚙</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="winner-screen" class="screen">
+        <div class="winner-card">
+            <h1 id="winner-title" style="font-size: 48px; margin: 0 0 20px 0;">🏆 WINNER!</h1>
+            <div id="winner-details" style="font-size: 24px; line-height: 1.6; margin-bottom: 30px;"></div>
+            <button class="btn" style="background:var(--accent); color:white; font-size:20px; padding: 15px 40px; border-radius: 30px;" onclick="goBackToStart()">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="left-ui-group">
+            <button class="ui-btn" style="background: var(--neon-red); color: white;" onclick="goBackToStart()">⬅ GO BACK</button>
+        </div>
+
+        <div id="top-ui">
+            <div class="scoreboard" id="game-scoreboard">
+                <div id="score-1" class="score-box">00</div>
+                <div id="score-2" class="score-box">00</div>
+            </div>
+            
+            <div class="right-ui-group">
+                <button class="ui-btn ui-btn-circle" onclick="toggleFullscreen()" title="Toggle Fullscreen">⛶</button>
+                <button class="ui-btn" onclick="openSettings(true)">SETTINGS ⚙</button>
+            </div>
+        </div>
+
+        <div id="game-header">
+            <div id="box-team-1" class="q-box">
+                <div id="q-img-1" class="q-img-container"></div>
+                <div id="q-cont-1" class="q-content"><div id="q-text-1" class="q-text"></div></div>
+            </div>
+            <div id="box-team-2" class="q-box">
+                <div id="q-img-2" class="q-img-container"></div>
+                <div id="q-cont-2" class="q-content"><div id="q-text-2" class="q-text"></div></div>
+            </div>
+        </div>
+
+        <div id="game-boundary">
+            <div id="lane-1" class="game-lane">
+                <div class="lane-info">
+                    <div id="timer-1" class="lane-timer">60s</div>
+                    <div id="tag-1" class="team-tag">PLAYER 1</div>
+                    <div id="hp-hearts-1" class="lane-hp"></div>
+                </div>
+                <div id="next-overlay-1" class="next-btn-overlay">
+                    <button class="btn" style="background:var(--neon-green); color:white; font-size: 20px; padding: 20px 40px; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);" onclick="handleNext(1)">NEXT QUESTION ➜</button>
+                </div>
+                <div id="overlay-1" class="team-end-overlay">
+                    <img src="GAME OVER.gif" style="max-width: 60%; margin-bottom: 20px;">
+                </div>
+            </div>
+            <div id="lane-2" class="game-lane">
+                <div class="lane-info">
+                    <div id="timer-2" class="lane-timer">60s</div>
+                    <div id="tag-2" class="team-tag">PLAYER 2</div>
+                    <div id="hp-hearts-2" class="lane-hp"></div>
+                </div>
+                <div id="next-overlay-2" class="next-btn-overlay">
+                    <button class="btn" style="background:var(--neon-green); color:white; font-size: 20px; padding: 20px 40px; border-radius: 50px; box-shadow: 0 10px 20px rgba(0,0,0,0.3);" onclick="handleNext(2)">NEXT QUESTION ➜</button>
+                </div>
+                <div id="overlay-2" class="team-end-overlay">
+                    <img src="GAME OVER.gif" style="max-width: 60%; margin-bottom: 20px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Game Settings</h2>
+                <button class="btn" style="background:var(--neon-green); color:white; font-size:24px; width:50px; height:50px; border-radius:50%; padding:0;" onclick="addNewQuestion()">+</button>
+            </div>
+            
+            <div class="file-controls">
+                <button class="btn" style="background:#455a64; color:white;" onclick="exportData()">💾 EXPORT</button>
+                <button class="btn" style="background:#455a64; color:white;" onclick="document.getElementById('import-file').click()">📁 IMPORT</button>
+                <button class="btn" style="background:var(--neon-red); color:white;" onclick="clearAllData()">🗑️ CLEAR</button>
+                <input type="file" id="import-file" style="display:none" onchange="importData(this)">
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin:20px 0; background:#f8f9fa; padding:20px; border-radius:20px;">
+                <label>Music: <button id="m-btn" class="btn" style="background:var(--neon-red); color:white; padding: 5px 15px;" onclick="toggleMusic()">OFF</button></label>
+                <label>Lives: <input type="number" id="life-val" value="3" style="width:50px;"></label>
+                <label>Time (sec): <input type="number" id="time-val" value="60" style="width:60px;"></label>
+                <label>Mode: <select id="mode-sel"><option value="1">1 Player</option><option value="2" selected>2 Players</option></select></label>
+                <label>Sync: <button id="sync-btn" class="btn" style="background:var(--neon-green); color:white; padding: 5px 15px;" onclick="toggleSync()">ON</button></label>
+            </div>
+            
+            <div id="q-list"></div>
+            <button id="main-save-btn" class="btn" style="width:100%; background:var(--accent); color:#fff; padding:20px; font-size:20px; border-radius: 20px;" onclick="saveAndStart()">SAVE & START</button>
+            <button id="resume-btn" class="btn" style="width:100%; background:var(--text-dark); color:#fff; padding:20px; font-size:20px; border-radius: 20px; display:none;" onclick="closeSettings()">RESUME</button>
+        </div>
+    </div>
+
+    <script>
+        const targetGifs = ['target1.gif', 'target2.gif', 'target 3.gif', 'target4.gif'];
+        let rawQuestions = Array.from({length: 5}, () => ({
+            text: "", img: "", opts: [{t: "", c: true, img: ""}, {t: "", c: false, img: ""}, {t: "", c: false, img: ""}, {t: "", c: false, img: ""}]
+        }));
+        
+        let db, teamData = {}, syncOn = true, isMusicOn = false, gameStarted = false, timerInterval = null;
+        let lastFocusedInput = null;
+        const music = document.getElementById('bg-music');
+        music.volume = 0.3;
+
+        const request = indexedDB.open("TeacherAngelaDB", 1);
+        request.onupgradeneeded = e => { db = e.target.result; db.createObjectStore("gameData", { keyPath: "id" }); };
+        request.onsuccess = e => { db = e.target.result; loadDB(); };
+
+        function loadDB() {
+            const tx = db.transaction("gameData", "readonly");
+            const get = tx.objectStore("gameData").get("current");
+            get.onsuccess = () => { if(get.result) { rawQuestions = get.result.data; } };
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Fullscreen error: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function goBackToStart() {
+            clearInterval(timerInterval);
+            clearInterval(window.gameInterval);
+            gameStarted = false;
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('winner-screen').style.display = 'none';
+            document.getElementById('intro-screen').style.display = 'flex';
+            document.getElementById('score-1').innerText = "00";
+            document.getElementById('score-2').innerText = "00";
+        }
+
+        window.addEventListener('paste', async (e) => {
+            if (!lastFocusedInput) return;
+            const item = Array.from(e.clipboardData.items).find(x => x.type.indexOf("image") !== -1);
+            if (item) {
+                const blob = item.getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const qi = parseInt(lastFocusedInput.dataset.qi);
+                    const oi = lastFocusedInput.dataset.oi ? parseInt(lastFocusedInput.dataset.oi) : null;
+                    if(lastFocusedInput.dataset.type === 'q') rawQuestions[qi].img = event.target.result;
+                    else rawQuestions[qi].opts[oi].img = event.target.result;
+                    openSettings(gameStarted);
+                };
+                reader.readAsDataURL(blob);
+            }
+        });
+
+        function toggleMusic() { 
+            isMusicOn = !isMusicOn; isMusicOn ? music.play() : music.pause();
+            document.getElementById('m-btn').innerText = isMusicOn ? "ON" : "OFF";
+            document.getElementById('m-btn').style.background = isMusicOn ? "var(--neon-green)" : "var(--neon-red)";
+        }
+
+        function toggleSync() {
+            syncOn = !syncOn; document.getElementById('sync-btn').innerText = syncOn ? "ON" : "OFF";
+            document.getElementById('sync-btn').style.background = syncOn ? "var(--neon-green)" : "#999";
+        }
+
+        function shuffleOptions(id, isQuick = false) {
+            const lane = document.getElementById(`lane-${id}`);
+            const targets = lane.querySelectorAll('.ghost-target');
+            const quadrants = [{x: 5, y: 5}, {x: 70, y: 5}, {x: 5, y: 40}, {x: 70, y: 40}].sort(() => Math.random() - 0.5);
+            targets.forEach((g, i) => {
+                g.style.transition = isQuick ? "all 0.4s ease-out" : "left 3s linear, top 3s linear";
+                const pos = quadrants[i % quadrants.length];
+                g.style.left = (pos.x + Math.random() * 10) + "%";
+                g.style.top = (pos.y + Math.random() * 10) + "%";
+            });
+        }
+
+        function addNewQuestion() {
+            rawQuestions.push({
+                text: "", img: "", opts: [{t: "", c: true, img: ""}, {t: "", c: false, img: ""}, {t: "", c: false, img: ""}, {t: "", c: false, img: ""}]
+            });
+            openSettings(gameStarted);
+        }
+
+        function deleteQuestion(index) {
+            rawQuestions.splice(index, 1);
+            openSettings(gameStarted);
+        }
+
+        function openSettings(duringGame = false) {
+            if(duringGame) clearInterval(timerInterval);
+            const list = document.getElementById('q-list'); list.innerHTML = '';
+            document.getElementById('main-save-btn').style.display = duringGame ? "none" : "block";
+            document.getElementById('resume-btn').style.display = duringGame ? "block" : "none";
+            
+            rawQuestions.forEach((q, i) => {
+                const card = document.createElement('div'); card.className = 'q-card';
+                card.innerHTML = `
+                <button class="delete-btn" onclick="deleteQuestion(${i})">✕</button>
+                <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+                    ${q.img ? `<img src="${q.img}" style="width:50px; height:50px; border-radius:5px;">`:''}
+                    <input type="text" value="${q.text}" data-type="q" data-qi="${i}" onfocus="lastFocusedInput=this" oninput="rawQuestions[${i}].text=this.value" style="flex:1;" placeholder="Question ${i+1}">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">${q.opts.map((o, oi) => `
+                    <div style="display:flex; align-items:center; gap:5px; background:#fff; padding:5px; border-radius:5px;">
+                        ${o.img ? `<img src="${o.img}" style="width:30px; height:30px;">`:''}
+                        <input type="text" value="${o.t}" data-type="o" data-qi="${i}" data-oi="${oi}" onfocus="lastFocusedInput=this" oninput="rawQuestions[${i}].opts[${oi}].t=this.value" style="flex:1; border:none;">
+                        <input type="radio" name="correct-${i}" ${o.c?'checked':''} onclick="rawQuestions[${i}].opts.forEach((opt, idx)=>opt.c=(idx===${oi}))">
+                    </div>`).join('')}</div>`;
+                list.appendChild(card);
+            });
+            document.getElementById('settings-modal').style.display = 'block';
+        }
+
+        function saveAndStart() {
+            gameStarted = true;
+            if(db) db.transaction("gameData", "readwrite").objectStore("gameData").put({ id: "current", data: rawQuestions });
+            const valid = rawQuestions.filter(q => q.text.trim() !== "" || q.img !== "");
+            
+            if(valid.length === 0) {
+                alert("Please add at least one question!");
+                return;
+            }
+
+            const mode = parseInt(document.getElementById('mode-sel').value);
+            const startTime = parseInt(document.getElementById('time-val').value);
+
+            document.getElementById('lane-1').style.backgroundImage = "url('background 2.gif')";
+            document.getElementById('lane-2').style.backgroundImage = "url('background 5.gif')";
+
+            teamData = {}; // Clear previous session
+            [1, 2].forEach(id => {
+                let qs = JSON.parse(JSON.stringify(valid));
+                if(!syncOn) qs.sort(() => Math.random() - 0.5);
+                teamData[id] = { 
+                    questions: qs, 
+                    currentIdx: 0, 
+                    lives: parseInt(document.getElementById('life-val').value), 
+                    time: startTime,
+                    maxTime: startTime,
+                    score: 0, 
+                    active: true, 
+                    isStunned: false,
+                    waitingForNext: false,
+                    finishTime: 99999 // Used to calculate who was faster in tie
+                };
+                updateHearts(id);
+                document.getElementById(`timer-${id}`).innerText = startTime + "s";
+                document.getElementById(`overlay-${id}`).style.display = 'none'; 
+                document.getElementById(`next-overlay-${id}`).style.display = 'none';
+            });
+
+            document.getElementById('lane-2').style.display = mode === 1 ? "none" : "block";
+            document.getElementById('box-team-2').style.display = mode === 1 ? "none" : "flex";
+            document.getElementById('game-scoreboard').style.display = mode === 1 ? "none" : "flex";
+
+            document.getElementById('settings-modal').style.display = 'none';
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            spawnPlayer(1); if(mode === 2) spawnPlayer(2);
+            loadQ(1); if(mode === 2) loadQ(2);
+            
+            startTimers();
+
+            if(window.gameInterval) clearInterval(window.gameInterval);
+            window.gameInterval = setInterval(() => { [1, 2].forEach(id => { if(teamData[id]?.active && !teamData[id]?.waitingForNext) shuffleOptions(id); }); }, 3000);
+        }
+
+        function startTimers() {
+            if(timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                [1, 2].forEach(id => {
+                    if(teamData[id] && teamData[id].active && !teamData[id].waitingForNext) {
+                        teamData[id].time--;
+                        document.getElementById(`timer-${id}`).innerText = teamData[id].time + "s";
+                        if(teamData[id].time <= 0) endTeam(id);
+                    }
+                });
+            }, 1000);
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(rawQuestions);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "Vocabman_Data.json";
+            link.click();
+        }
+
+        function importData(input) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                rawQuestions = JSON.parse(e.target.result);
+                openSettings();
+            };
+            reader.readAsText(input.files[0]);
+        }
+
+        function clearAllData() { if(confirm("Delete all questions?")) { rawQuestions = []; openSettings(); } }
+        function closeSettings() { 
+            document.getElementById('settings-modal').style.display = 'none'; 
+            if(gameStarted) startTimers();
+        }
+        
+        function updateHearts(id) {
+            const container = document.getElementById(`hp-hearts-${id}`);
+            container.innerHTML = '';
+            for(let i=0; i < teamData[id].lives; i++) container.innerHTML += `<img src="life.gif" class="hp-heart">`;
+        }
+
+        function spawnPlayer(id) {
+            const lane = document.getElementById(`lane-${id}`);
+            lane.querySelectorAll('.pacman').forEach(p => p.remove());
+            const p = document.createElement('div'); p.className = 'pacman';
+            p.style.left = '45%'; p.style.top = '70%';
+            if(id === 2) p.style.filter = 'hue-rotate(160deg)';
+            lane.appendChild(p);
+            drag(p, id);
+        }
+
+        function loadQ(id) {
+            const data = teamData[id];
+            const lane = document.getElementById(`lane-${id}`);
+            lane.querySelectorAll('.ghost-target').forEach(g => g.remove());
+            if(data.currentIdx >= data.questions.length) { endTeam(id); return; }
+            const q = data.questions[data.currentIdx];
+            document.getElementById(`q-text-${id}`).innerText = q.text;
+            document.getElementById(`q-img-${id}`).innerHTML = q.img ? `<img src="${q.img}" class="q-img-game">` : '';
+            q.opts.forEach((o, i) => {
+                const g = document.createElement('div'); g.className = 'ghost-target';
+                const img = o.img ? `<img src="${o.img}" class="ans-img-content">` : '';
+                g.innerHTML = `${img}<img src="${targetGifs[i]}" class="ghost-img"><span class="ans-tag">${o.t}</span>`;
+                g.dataset.c = o.c; lane.appendChild(g);
+            });
+            shuffleOptions(id);
+        }
+
+        function drag(el, id) {
+            const move = (e) => {
+                if(!teamData[id].active || teamData[id].isStunned || teamData[id].waitingForNext) return;
+                const evt = e.touches ? e.touches[0] : e;
+                const r = el.parentElement.getBoundingClientRect();
+                el.style.left = (evt.clientX - r.left - 35) + 'px';
+                el.style.top = (evt.clientY - r.top - 35) + 'px';
+                check(el, id);
+            };
+            el.addEventListener('mousedown', () => el.addEventListener('mousemove', move));
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); el.addEventListener('touchmove', move); });
+            window.addEventListener('mouseup', () => el.removeEventListener('mousemove', move));
+            window.addEventListener('touchend', () => el.removeEventListener('touchmove', move));
+        }
+
+        function check(p, id) {
+            const pR = p.getBoundingClientRect();
+            p.parentElement.querySelectorAll('.ghost-target').forEach(g => {
+                const gR = g.getBoundingClientRect();
+                if(!(pR.right < gR.left || pR.left > gR.right || pR.bottom < gR.top || pR.top > gR.bottom)) {
+                    if(g.dataset.c === "true") {
+                        const chime = document.getElementById('sfx-chime');
+                        chime.currentTime = 0; chime.play();
+                        
+                        teamData[id].waitingForNext = true;
+                        document.getElementById(`next-overlay-${id}`).style.display = 'flex';
+                    } else {
+                        const loseLife = document.getElementById('sfx-lose-life');
+                        loseLife.currentTime = 0; loseLife.play();
+                        
+                        teamData[id].lives--; 
+                        updateHearts(id);
+                        g.remove(); 
+                        teamData[id].isStunned = true; 
+                        p.classList.add('vibrate');
+                        
+                        if(teamData[id].lives <= 0) {
+                            endTeam(id);
+                        } else {
+                            setTimeout(() => { 
+                                teamData[id].isStunned = false; 
+                                p.classList.remove('vibrate'); 
+                            }, 1500);
+                        }
+                    }
+                }
+            });
+        }
+
+        function handleNext(id) {
+            teamData[id].score++;
+            document.getElementById(`score-${id}`).innerText = teamData[id].score.toString().padStart(2, '0');
+            teamData[id].currentIdx++;
+            teamData[id].waitingForNext = false;
+            document.getElementById(`next-overlay-${id}`).style.display = 'none';
+            spawnPlayer(id);
+            loadQ(id);
+        }
+
+        function endTeam(id) { 
+            if(!teamData[id].active) return;
+            teamData[id].active = false; 
+            
+            // Record how much time was spent (max - remaining)
+            teamData[id].finishTime = teamData[id].maxTime - teamData[id].time;
+
+            const over = document.getElementById('sfx-gameover');
+            over.currentTime = 0; over.play();
+            document.getElementById(`overlay-${id}`).style.display = 'flex'; 
+            
+            const mode = parseInt(document.getElementById('mode-sel').value);
+            const bothDone = (mode === 1) || (!teamData[1].active && !teamData[2].active);
+            
+            if(bothDone) {
+                clearInterval(timerInterval);
+                setTimeout(declareWinner, 2000);
+            }
+        }
+
+        function declareWinner() {
+            const mode = parseInt(document.getElementById('mode-sel').value);
+            const titleEl = document.getElementById('winner-title');
+            const detailEl = document.getElementById('winner-details');
+            
+            let resultText = "";
+            let winColor = "var(--neon-green)";
+
+            if(mode === 1) {
+                titleEl.innerText = "GAME OVER!";
+                resultText = `Final Score: ${teamData[1].score}<br>Time: ${teamData[1].finishTime}s`;
+            } else {
+                const p1 = teamData[1];
+                const p2 = teamData[2];
+
+                if(p1.score > p2.score) {
+                    titleEl.innerText = "PLAYER 1 WINS!";
+                    resultText = `Score: ${p1.score} vs ${p2.score}`;
+                } else if (p2.score > p1.score) {
+                    titleEl.innerText = "PLAYER 2 WINS!";
+                    resultText = `Score: ${p2.score} vs ${p1.score}`;
+                } else {
+                    // Tie-breaker: who was faster
+                    if(p1.finishTime < p2.finishTime) {
+                        titleEl.innerText = "PLAYER 1 WINS! (Tie-Breaker)";
+                        resultText = `Both got ${p1.score} points,<br>but Player 1 was ${p2.finishTime - p1.finishTime}s faster!`;
+                    } else if (p2.finishTime < p1.finishTime) {
+                        titleEl.innerText = "PLAYER 2 WINS! (Tie-Breaker)";
+                        resultText = `Both got ${p1.score} points,<br>but Player 2 was ${p1.finishTime - p2.finishTime}s faster!`;
+                    } else {
+                        titleEl.innerText = "IT'S A TRUE TIE!";
+                        resultText = `Both got ${p1.score} points at the exact same time!`;
+                    }
+                }
+            }
+
+            detailEl.innerHTML = resultText;
+            document.getElementById('winner-screen').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
