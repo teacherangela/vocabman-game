@@ -48,7 +48,6 @@
             max-width: 80%;
         }
 
-        /* Combined Group for Music + Fullscreen */
         .top-right-group {
             position: absolute;
             top: 20px;
@@ -93,9 +92,9 @@
         }
 
         #game-boundary { position: absolute; top: 220px; left: 0; width: 100%; height: calc(100% - 220px); display: flex; }
-        .game-lane { position: relative; height: 100%; flex: 1; background-size: cover; background-position: center; border-right: 4px solid rgba(255,255,255,0.3); }
+        .game-lane { position: relative; height: 100%; flex: 1; background-size: cover; background-position: center; border-right: 4px solid rgba(255,255,255,0.3); overflow: hidden; }
 
-        .lane-info { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 800; }
+        .lane-info { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; z-index: 800; pointer-events: none;}
         .team-tag { font-size: 16px; color: #fff; background: var(--accent); padding: 4px 15px; border-radius: 20px; box-shadow: var(--shadow); }
         .lane-hp { display: flex; gap: 3px; background: rgba(255,255,255,0.2); padding: 5px; border-radius: 15px; }
         .hp-heart { width: 28px; height: 28px; object-fit: contain; }
@@ -105,9 +104,11 @@
         #top-ui {
             position: absolute; top: 10px; left: 0; width: 100%;
             display: flex; justify-content: center; align-items: center; z-index: 2000;
-            padding: 0 20px; box-sizing: border-box;
+            padding: 0 20px; box-sizing: border-box; pointer-events: none;
         }
         
+        #top-ui button, #top-ui .scoreboard { pointer-events: auto; }
+
         .scoreboard {
             background: var(--panel-bg); backdrop-filter: blur(8px); border-radius: 60px;
             display: flex; padding: 8px 25px; gap: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.25);
@@ -135,7 +136,7 @@
 
         .team-end-overlay { display: none; position: absolute; inset: 0; background: rgba(38, 50, 56, 0.95); z-index: 900; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; }
         
-        .pacman { position: absolute; width: 70px; height: 70px; background: url('PACMAN.gif') center/contain no-repeat; z-index: 500; cursor: grab; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); }
+        .pacman { position: absolute; width: 70px; height: 70px; background: url('PACMAN.gif') center/contain no-repeat; z-index: 500; cursor: grab; filter: drop-shadow(0 5px 15px rgba(0,0,0,0.3)); touch-action: none; }
         
         .ghost-target { position: absolute; width: 120px; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .ghost-img { width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 5px 10px rgba(0,0,0,0.2)); }
@@ -347,7 +348,6 @@
             isMusicOn = !isMusicOn; isMusicOn ? music.play() : music.pause();
             const btns = document.querySelectorAll('.music-toggle-btn');
             btns.forEach(btn => {
-                btn.innerText = isMusicOn ? "♪" : "♪"; // Keep icon same
                 btn.style.background = isMusicOn ? "var(--neon-green)" : "var(--neon-red)";
             });
         }
@@ -360,7 +360,7 @@
         function shuffleOptions(id, isQuick = false) {
             const lane = document.getElementById(`lane-${id}`);
             const targets = lane.querySelectorAll('.ghost-target');
-            const quadrants = [{x: 5, y: 5}, {x: 70, y: 5}, {x: 5, y: 40}, {x: 70, y: 40}].sort(() => Math.random() - 0.5);
+            const quadrants = [{x: 5, y: 5}, {x: 60, y: 5}, {x: 5, y: 35}, {x: 60, y: 35}].sort(() => Math.random() - 0.5);
             targets.forEach((g, i) => {
                 g.style.transition = isQuick ? "all 0.4s ease-out" : "left 3s linear, top 3s linear";
                 const pos = quadrants[i % quadrants.length];
@@ -507,11 +507,64 @@
         function spawnPlayer(id) {
             const lane = document.getElementById(`lane-${id}`);
             lane.querySelectorAll('.pacman').forEach(p => p.remove());
-            const p = document.createElement('div'); p.className = 'pacman';
-            p.style.left = '45%'; p.style.top = '70%';
+            const p = document.createElement('div'); 
+            p.className = 'pacman';
+            p.id = `pacman-${id}`;
+            p.style.left = 'calc(50% - 35px)'; 
+            p.style.top = '75%';
             if(id === 2) p.style.filter = 'hue-rotate(160deg)';
             lane.appendChild(p);
-            drag(p, id);
+            setupDrag(p, id);
+        }
+
+        function setupDrag(el, id) {
+            const lane = document.getElementById(`lane-${id}`);
+            let isDragging = false;
+
+            const handleMove = (e) => {
+                if (!isDragging || !teamData[id].active || teamData[id].isStunned || teamData[id].waitingForNext) return;
+                
+                const evt = e.touches ? Array.from(e.touches).find(t => t.target.closest(`#pacman-${id}`)) || e.touches[0] : e;
+                const laneRect = lane.getBoundingClientRect();
+                
+                // Calculate position relative to lane
+                let x = (evt.clientX - laneRect.left) - 35;
+                let y = (evt.clientY - laneRect.top) - 35;
+
+                // Boundaries
+                const maxX = laneRect.width - 70;
+                const maxY = laneRect.height - 70;
+
+                if (x < 0) x = 0;
+                if (x > maxX) x = maxX;
+                if (y < 0) y = 0;
+                if (y > maxY) y = maxY;
+
+                el.style.left = x + 'px';
+                el.style.top = y + 'px';
+                
+                checkCollision(el, id);
+            };
+
+            const startDrag = (e) => {
+                isDragging = true;
+                handleMove(e);
+            };
+
+            const stopDrag = () => {
+                isDragging = false;
+            };
+
+            el.addEventListener('mousedown', startDrag);
+            window.addEventListener('mousemove', handleMove);
+            window.addEventListener('mouseup', stopDrag);
+
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                startDrag(e);
+            }, { passive: false });
+            window.addEventListener('touchmove', handleMove, { passive: false });
+            window.addEventListener('touchend', stopDrag);
         }
 
         function loadQ(id) {
@@ -531,22 +584,7 @@
             shuffleOptions(id);
         }
 
-        function drag(el, id) {
-            const move = (e) => {
-                if(!teamData[id].active || teamData[id].isStunned || teamData[id].waitingForNext) return;
-                const evt = e.touches ? e.touches[0] : e;
-                const r = el.parentElement.getBoundingClientRect();
-                el.style.left = (evt.clientX - r.left - 35) + 'px';
-                el.style.top = (evt.clientY - r.top - 35) + 'px';
-                check(el, id);
-            };
-            el.addEventListener('mousedown', () => el.addEventListener('mousemove', move));
-            el.addEventListener('touchstart', (e) => { e.preventDefault(); el.addEventListener('touchmove', move); });
-            window.addEventListener('mouseup', () => el.removeEventListener('mousemove', move));
-            window.addEventListener('touchend', () => el.removeEventListener('touchmove', move));
-        }
-
-        function check(p, id) {
+        function checkCollision(p, id) {
             const pR = p.getBoundingClientRect();
             p.parentElement.querySelectorAll('.ghost-target').forEach(g => {
                 const gR = g.getBoundingClientRect();
@@ -593,7 +631,6 @@
         function endTeam(id) { 
             if(!teamData[id].active) return;
             teamData[id].active = false; 
-            
             teamData[id].finishTime = teamData[id].maxTime - teamData[id].time;
 
             const over = document.getElementById('sfx-gameover');
@@ -603,9 +640,7 @@
             const mode = parseInt(document.getElementById('mode-sel').value);
             const bothDone = (mode === 1) || (!teamData[1].active && !teamData[2].active);
             
-            if(bothDone) {
-                setTimeout(showWinner, 1500);
-            }
+            if(bothDone) setTimeout(showWinner, 1500);
         }
 
         function showWinner() {
